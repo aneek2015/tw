@@ -19,57 +19,116 @@ st.set_page_config(page_title="簡易台股判斷(Pro)", layout="wide")
 
 st.markdown("""
     <style>
-    /* 全域設定 */
-    .big-font { font-size:28px !important; font-weight: bold; color: #FFFFFF; }
-    .sub-font { font-size:16px !important; color: #DDDDDD; }
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;500;600;700&display=swap');
     
-    /* 資訊卡片容器 */
+    /* 全域設定 */
+    html, body, [class*="css"] {
+        font-family: 'Rajdhani', sans-serif;
+    }
+    
+    .big-font { font-size:28px !important; font-weight: 700; color: #FFFFFF; font-family: 'Orbitron', sans-serif; }
+    .sub-font { font-size:16px !important; color: #A8B2C1; font-weight: 500; }
+    
+    /* 玻璃擬物化卡片容器 */
     .status-card {
-        background-color: #262730;
+        background: linear-gradient(135deg, rgba(38, 39, 48, 0.7), rgba(20, 21, 26, 0.4));
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         padding: 25px;
-        border-radius: 12px;
-        border: 1px solid #444;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         margin-bottom: 25px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        animation: slideUpFade 0.6s ease-out forwards;
+        opacity: 0;
+    }
+    
+    .status-card:nth-child(1) { animation-delay: 0.1s; }
+    .status-card:nth-child(2) { animation-delay: 0.2s; }
+    
+    .status-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
     }
 
     /* 健檢專用卡片 */
     .health-card {
-        background-color: #1E1E1E;
+        background: linear-gradient(145deg, #1E1E1E, #141414);
         padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid #ff4b4b;
+        border-radius: 12px;
+        border-left: 5px solid #ff0055;
         margin-bottom: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        animation: slideUpFade 0.5s ease-out forwards;
+        opacity: 0;
     }
+    .health-card:nth-child(2) { animation-delay: 0.15s; }
+    .health-card:nth-child(4) { animation-delay: 0.25s; }
+    .health-card:nth-child(6) { animation-delay: 0.35s; }
     
     /* 訊號燈與標籤樣式 */
     .signal-box {
         display: inline-block;
-        padding: 5px 15px;
+        padding: 6px 18px;
         border-radius: 8px;
-        font-weight: bold;
+        font-weight: 700;
         font-size: 20px;
         margin-top: 10px;
         border: 1px solid rgba(255,255,255,0.2);
+        font-family: 'Orbitron', sans-serif;
+        letter-spacing: 1px;
     }
     
-    /* 趨勢顏色定義 (紅漲綠跌) */
-    .sig-buy { background-color: #590000; color: #ff4b4b; border-color: #ff4b4b; } 
-    .sig-sell { background-color: #003300; color: #00c07c; border-color: #00c07c; } 
-    .sig-hold { background-color: #002244; color: #4e8cff; border-color: #4e8cff; } 
-    .sig-wait { background-color: #333333; color: #aaaaaa; border-color: #aaaaaa; } 
+    /* 趨勢顏色定義 (紅漲綠跌) - 提升彩度與科技感 */
+    .sig-buy { background-color: rgba(255, 0, 85, 0.15); color: #ff0055; border-color: #ff0055; text-shadow: 0 0 10px rgba(255,0,85,0.4); } 
+    .sig-sell { background-color: rgba(0, 255, 170, 0.15); color: #00ffaa; border-color: #00ffaa; text-shadow: 0 0 10px rgba(0,255,170,0.4); } 
+    .sig-hold { background-color: rgba(0, 153, 255, 0.15); color: #0099ff; border-color: #0099ff; text-shadow: 0 0 10px rgba(0,153,255,0.4); } 
+    .sig-wait { background-color: rgba(170, 170, 170, 0.15); color: #aaaaaa; border-color: #aaaaaa; } 
 
-    .trend-up { color: #ff4b4b !important; font-weight: bold; }
-    .trend-down { color: #00c07c !important; font-weight: bold; }
-    .trend-neutral { color: #aaaaaa !important; font-weight: bold; }
+    .trend-up { color: #ff0055 !important; font-weight: 700; text-shadow: 0 0 8px rgba(255,0,85,0.3); }
+    .trend-down { color: #00ffaa !important; font-weight: 700; text-shadow: 0 0 8px rgba(0,255,170,0.3); }
+    .trend-neutral { color: #aaaaaa !important; font-weight: 700; }
     
     /* 說明區塊 */
     .logic-box {
-        background-color: #1E1E1E;
-        padding: 15px;
-        border-left: 4px solid #FFD700;
-        margin-bottom: 10px;
+        background: rgba(30, 30, 30, 0.6);
+        backdrop-filter: blur(8px);
+        padding: 18px;
+        border-left: 4px solid #00ffaa;
+        margin-bottom: 12px;
         color: #E0E0E0;
+        border-radius: 0 8px 8px 0;
+    }
+    
+    /* 動畫定義 */
+    @keyframes slideUpFade {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* 響應式佈局 (Mobile Responsiveness) */
+    @media (max-width: 768px) {
+        .flex-container {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+        .flex-item-right {
+            text-align: left !important;
+            margin-top: 15px !important;
+        }
+        .big-font { font-size: 22px !important; }
+        .sub-font { font-size: 14px !important; }
+        .price-text { font-size: 32px !important; }
+        .price-change { font-size: 18px !important; margin-left: 0 !important; display: block; margin-top: 5px;}
+        .status-card { padding: 15px; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -548,19 +607,19 @@ if page == "📊 深度個股儀表板":
 
         st.markdown(f"""
         <div class="status-card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="flex-container" style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
                     <div class="sub-font">股票代號 | 名稱</div>
                     <div class="big-font" style="margin-bottom: 5px;">{data['ticker']} | {stock_name}</div>
                     <div>
-                        <span style="font-size: 42px; line-height: 1;" class="{trend_class}">{current_price:.2f}</span>
-                        <span style="font-size: 22px; margin-left: 15px;" class="{trend_class}">
+                        <span style="font-size: 42px; line-height: 1;" class="price-text {trend_class}">{current_price:.2f}</span>
+                        <span style="font-size: 22px; margin-left: 15px;" class="price-change {trend_class}">
                             {sign}{change:.2f} ({sign}{pct:.2f}%)
                         </span>
                     </div>
                     <div class="sub-font" style="margin-top: 5px; font-size: 12px;">資料來源: YF / FinMind / TWSE (Auto-Cached)</div>
                 </div>
-                <div style="text-align: right; max-width: 400px;">
+                <div class="flex-item-right" style="text-align: right; max-width: 400px;">
                     <div class="sub-font">AI 投資總結</div>
                     <div class="signal-box {data['verdict_class']}">{data['verdict']}</div>
                     <div style="margin-top: 8px; color: #BBB; font-size: 14px;">
@@ -774,18 +833,18 @@ elif page == "📊 ETF 戰情室":
 
         st.markdown(f"""
         <div class="status-card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="flex-container" style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
                     <div class="sub-font">ETF 代號 | 名稱 | 類型</div>
                     <div class="big-font" style="margin-bottom: 5px;">{data['name']} <span style="font-size:16px; color:#aaa;">({m['Type']})</span></div>
                     <div>
-                        <span style="font-size: 42px; line-height: 1;" class="{trend_class}">{current_price:.2f}</span>
-                        <span style="font-size: 22px; margin-left: 15px;" class="{trend_class}">
+                        <span style="font-size: 42px; line-height: 1;" class="price-text {trend_class}">{current_price:.2f}</span>
+                        <span style="font-size: 22px; margin-left: 15px;" class="price-change {trend_class}">
                             {sign}{change:.2f} ({sign}{(change/price_history['Close'].iloc[-2]*100):.2f}%)
                         </span>
                     </div>
                 </div>
-                <div style="text-align: right;">
+                <div class="flex-item-right" style="text-align: right;">
                     <div class="sub-font">總資產規模 (AUM)</div>
                     <div class="big-font">{m['AUM'] / 100000000:.2f} 億</div>
                     <div class="sub-font" style="margin-top:5px;">費用率: {m['ExpenseRatio']*100:.2f}% | 殖利率: {m['Yield']*100:.2f}%</div>
@@ -891,47 +950,9 @@ elif page == "🗄️ 歷史資料庫":
 elif page == "📖 策略邏輯白皮書":
     st.title("📖 AI 策略與全方位數據處理白皮書")
     
-    st.markdown("""
-    本系統採用獨創的 **「三引擎 (Tri-Engine)」** 數據處理架構，結合了速度、深度與準確度。
-    並針對研究報告建議，優化了視覺化圖表與新增回測模組。
-    """)
-
-    st.markdown('<div class="logic-title">1. 三引擎數據源架構</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div class="logic-box">
-    <ul>
-        <li><strong>引擎 A：Yahoo Finance (yfinance)</strong>
-            <ul><li>負責：即時股價、K線歷史數據、技術指標運算、基本財報、配息紀錄。</li></ul>
-        </li>
-        <li><strong>引擎 B：FinMind (Open Data)</strong>
-            <ul><li>負責：籌碼面數據 (三大法人買賣超)。</li></ul>
-        </li>
-        <li><strong>引擎 C：TWSE OpenAPI (證交所官方)</strong>
-            <ul><li>負責：官方估值數據 (本益比 PE、股價淨值比 PB、殖利率)。</li></ul>
-        </li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="logic-title">2. 回測策略邏輯 (Backtesting)</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div class="logic-box">
-    <ul>
-        <li><strong>MA_Cross (黃金交叉)</strong>：當短期均線 (MA5) 向上突破長期均線 (MA20) 時買入持有；跌破時賣出空手。</li>
-        <li><strong>RSI_Reversal (反轉策略)</strong>：當 RSI < 30 (超賣) 時買入博反彈；當 RSI > 70 (超買) 時賣出獲利。</li>
-        <li><strong>注意</strong>：回測僅使用過去一年日線數據，不包含手續費與滑價計算，僅供趨勢參考。</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="logic-title">3. AI 決策引擎判斷標準</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div class="logic-box">
-    <ol>
-        <li><strong><span style="color:#ff4b4b">🔴 適合買入 (Buy)</span></strong>：技術面多頭排列且動能強勁，同時基本面評分良好。</li>
-        <li><strong><span style="color:#4e8cff">🔵 繼續持有 (Hold)</span></strong>：股價位於均線之上，趨勢向上，無賣出訊號。</li>
-        <li><strong><span style="color:#00c07c">🟢 獲利了結 (Sell)</span></strong>：RSI 過熱 (>80) 或 跌破季線轉空。</li>
-        <li><strong><span style="color:#aaaaaa">⚪ 暫時觀望 (Wait)</span></strong>：趨勢不明或基本面有疑慮。</li>
-    </ol>
-    </div>
-    """, unsafe_allow_html=True)
+    try:
+        with open("數據處理說明.MD", "r", encoding="utf-8") as f:
+            md_content = f.read()
+        st.markdown(md_content, unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"無法載入白皮書檔案 ({e})")
