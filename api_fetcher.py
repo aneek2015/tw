@@ -1,3 +1,4 @@
+import streamlit as st
 import yfinance as yf
 import pandas as pd
 import requests
@@ -14,7 +15,12 @@ warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 # --- 1. 定義單一來源擷取邏輯 (加上重試機制) ---
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+@st.cache_data(ttl=900, show_spinner=False)
 def get_yahoo_data_sync(ticker_symbol):
+    return _get_yahoo_data_sync_inner(ticker_symbol)
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+def _get_yahoo_data_sync_inner(ticker_symbol):
     try:
         stock = yf.Ticker(ticker_symbol)
         df = stock.history(period="1y")
@@ -97,7 +103,7 @@ async def _fetch_all_data_async(raw_ticker, yf_ticker_name):
     loop = asyncio.get_event_loop()
     
     # 使用 run_in_executor 讓同步的 (YF, FinMind) 能被非同步等待
-    task_yf = loop.run_in_executor(None, get_yahoo_data_sync, yf_ticker_name)
+    task_yf = loop.run_in_executor(None, _get_yahoo_data_sync_inner, yf_ticker_name)
     task_finmind = loop.run_in_executor(None, get_finmind_chips_sync, raw_ticker)
     task_twse = asyncio.create_task(fetch_twse_data_async(raw_ticker))
     
@@ -105,6 +111,7 @@ async def _fetch_all_data_async(raw_ticker, yf_ticker_name):
     results = await asyncio.gather(task_yf, task_finmind, task_twse)
     return results
 
+@st.cache_data(ttl=900, show_spinner=False)
 def fetch_all_data(raw_ticker, yf_ticker_name):
     """
     提供給 Streamlit 的進入點。

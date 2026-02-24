@@ -22,36 +22,46 @@ st.set_page_config(page_title="簡易台股判斷(Pro)", layout="wide")
 
 st.markdown("""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700;800&display=swap');
+    
     /* --- Crystalline Market: Glassmorphism Theme --- */
     /* 全域設定 */
-    .big-font { font-size: 32px !important; font-weight: 800; color: #FFFFFF; font-family: 'Outfit', sans-serif; }
-    .sub-font { font-size: 14px !important; color: #A0AEC0; font-family: 'Inter', sans-serif; letter-spacing: 1px; text-transform: uppercase;}
+    * { font-family: 'Inter', sans-serif; }
+    h1, h2, h3, .big-font { font-family: 'Outfit', sans-serif !important; }
+    
+    .big-font { font-size: 32px !important; font-weight: 800; color: #FFFFFF; }
+    .sub-font { font-size: 14px !important; color: #A0AEC0; letter-spacing: 1px; text-transform: uppercase;}
     
     /* 資訊卡片容器: 玻璃擬物化 Glassmorphism */
     .status-card {
-        background: rgba(25, 30, 45, 0.6);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        background: rgba(25, 30, 45, 0.65);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
         padding: 25px;
         border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.08); /* 更輕薄的邊框 */
         margin-bottom: 25px;
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
     }
     .status-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
+        transform: translateY(-4px) scale(1.01);
+        box-shadow: 0 15px 40px 0 rgba(0, 240, 255, 0.15); /* Hover Glow */
     }
 
-    /* 健檢專用卡片 */
+    /* 健檢專用卡片 (加入微互動) */
     .health-card {
-        background: linear-gradient(145deg, rgba(30, 30, 30, 0.8) 0%, rgba(20, 20, 20, 0.9) 100%);
+        background: linear-gradient(135deg, rgba(30, 30, 30, 0.85) 0%, rgba(15, 15, 15, 0.95) 100%);
         padding: 20px;
         border-radius: 12px;
         border-left: 4px solid #00F0FF;
         margin-bottom: 15px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+    }
+    .health-card:hover {
+        border-left: 8px solid #FF00FF;
+        background: linear-gradient(135deg, rgba(35, 35, 35, 0.9) 0%, rgba(20, 20, 20, 1) 100%);
     }
     
     /* 訊號燈與標籤樣式 (Neon glow) */
@@ -66,19 +76,30 @@ st.markdown("""
         transition: all 0.3s ease;
     }
     
-    /* 趨勢顏色定義與霓虹光暈 */
+    /* 趨勢顏色定義與霓虹光暈 (搭配 Pulse 動畫) */
+    @keyframes pulse-glow {
+        0% { box-shadow: 0 0 5px rgba(255, 30, 86, 0.2); }
+        50% { box-shadow: 0 0 20px rgba(255, 30, 86, 0.6); }
+        100% { box-shadow: 0 0 5px rgba(255, 30, 86, 0.2); }
+    }
+    @keyframes pulse-glow-green {
+        0% { box-shadow: 0 0 5px rgba(0, 255, 136, 0.2); }
+        50% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.6); }
+        100% { box-shadow: 0 0 5px rgba(0, 255, 136, 0.2); }
+    }
+
     .sig-buy { 
         background: rgba(255, 30, 86, 0.15); 
         color: #FF1E56; 
         border: 1px solid #FF1E56; 
-        box-shadow: 0 0 15px rgba(255, 30, 86, 0.3);
+        animation: pulse-glow 2s infinite;
     } 
     .sig-sell { 
         background: rgba(0, 255, 136, 0.15); 
         color: #00FF88; 
         border: 1px solid #00FF88; 
-        box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
-    } 
+        animation: pulse-glow-green 2s infinite;
+    }  
     .sig-hold { 
         background: rgba(0, 195, 255, 0.15); 
         color: #00C3FF; 
