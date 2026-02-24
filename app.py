@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from database import db
 from api_fetcher import fetch_all_data, get_yahoo_data_sync
 from indicators import calculate_technicals, run_backtest_logic
+from ai_agent import generate_ai_report_stream
 import 投資分析  # 保留雙軌制分析模組
 
 
@@ -368,6 +369,12 @@ with st.sidebar:
         etf_input = st.text_input("輸入代號 (如 0050)", "0050", key="etf_input")
         etf_btn = st.button("分析 ETF", type="primary", key="etf_btn")
 
+    st.write("---")
+    
+    st.header("🔑 AI 引擎設定")
+    gemini_api_key = st.text_input("輸入 Google Gemini API Key", type="password", help="用於產生真人專家級別的投資報告解析。若是留空，則無法使用 AI 生成報告功能。申請請至 Google AI Studio。")
+
+
 # --- 頁面: 個股儀表板 ---
 if page == "📊 深度個股儀表板":
     st.title("🕵️ 台股 AI 深度戰情室 (Pro)")
@@ -612,6 +619,27 @@ if page == "📊 深度個股儀表板":
                 st.markdown('</div>', unsafe_allow_html=True)
 
         with tab5:
+            st.subheader("🎯 投資教練報告 (LLM 深度解析)")
+            st.write("除了系統的演算法初判外，您可以呼叫大模型為您總結具體的戰略沙盤推演。")
+            
+            if st.button("✨ 立即生成 AI 深度總結報告", type="primary"):
+                if not gemini_api_key:
+                    st.error("⚠️ 請先於左側邊欄設定您的 [Google Gemini API Key] 才能呼叫大模型引擎！")
+                else:
+                    report_placeholder = st.empty()
+                    try:
+                        stream_gen = generate_ai_report_stream(api_key=gemini_api_key, data=data)
+                        full_report = ""
+                        for chunk_text in stream_gen:
+                            full_report += chunk_text
+                            # 加上一個閃爍的光標帶來打字效果
+                            report_placeholder.markdown(full_report + " ▌")
+                            time.sleep(0.02)
+                        report_placeholder.markdown(full_report)
+                    except Exception as e:
+                        st.error(f"發生未預期錯誤: {e}")
+            
+            st.markdown("---")
             st.subheader("🎯 雙軌制投資框架分析報告")
             st.caption("基於獨立財務與技術均線的進場判斷系統 (備註：此判斷邏輯為獨立分析引擎，與上方 AI 總結模型為分開運行，建議兩者互相參照對比)")
             
