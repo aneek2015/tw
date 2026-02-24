@@ -6,8 +6,8 @@ def generate_ai_report_stream(api_key: str, data: dict):
     使用 Google Gemini API 產生串流式的投資分析報告
     """
     genai.configure(api_key=api_key)
-    # 使用 gemini-1.5-flash 作為快速回答模型
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    # 使用 gemini-2.0-flash-lite 作為快速回答模型
+    model = genai.GenerativeModel("gemini-2.0-flash-lite")
     
     ticker = data.get('ticker', '未知')
     name = data.get('name', '未知')
