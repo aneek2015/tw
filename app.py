@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from database import db
 from api_fetcher import fetch_all_data, get_yahoo_data_sync
 from indicators import calculate_technicals, run_backtest_logic
+from ai_agent import generate_ai_report_stream
 import 投資分析  # 保留雙軌制分析模組
 
 
@@ -376,7 +377,13 @@ with st.sidebar:
     except Exception:
         pass
         
-    gemini_api_key = st.text_input("輸入 Google Gemini API Key", value=default_key, type="password", help="用於產生真人專家級別的投資報告解析。如果已在 Streamlit Secrets 設定，將會自動載入。")
+    if default_key:
+        st.success("✅ AI 引擎已啟用 (由系統安全載入)")
+        gemini_api_key = default_key
+    else:
+        gemini_api_key = st.text_input("輸入 Google Gemini API Key", type="password", help="用於產生真人專家級別的投資報告解析。如果已在 Streamlit Secrets 設定，將會自動載入。")
+        if gemini_api_key:
+            st.success("✅ AI 引擎已啟用 (自訂金鑰)")
 
 # --- 頁面: 個股儀表板 ---
 if page == "📊 深度個股儀表板":
