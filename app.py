@@ -612,6 +612,27 @@ if page == "📊 深度個股儀表板":
                 st.markdown('</div>', unsafe_allow_html=True)
 
         with tab5:
+            st.subheader("🎯 投資教練報告 (LLM 深度解析)")
+            st.write("除了系統的演算法初判外，您可以呼叫大模型為您總結具體的戰略沙盤推演。")
+            
+            if st.button("✨ 立即生成 AI 深度總結報告", type="primary"):
+                if not gemini_api_key:
+                    st.error("⚠️ 請先於左側邊欄設定您的 [Google Gemini API Key] 才能呼叫大模型引擎！")
+                else:
+                    report_placeholder = st.empty()
+                    try:
+                        stream_gen = generate_ai_report_stream(api_key=gemini_api_key, data=st.session_state['analysis_result'])
+                        full_report = ""
+                        for chunk_text in stream_gen:
+                            full_report += chunk_text
+                            # 加上一個閃爍的光標帶來打字效果
+                            report_placeholder.markdown(full_report + " ▌")
+                            time.sleep(0.02)
+                        report_placeholder.markdown(full_report)
+                    except Exception as e:
+                        st.error(f"發生未預期錯誤: {e}")
+            
+            st.markdown("---")
             st.subheader("🎯 雙軌制投資框架分析報告")
             st.caption("基於獨立財務與技術均線的進場判斷系統 (備註：此判斷邏輯為獨立分析引擎，與上方 AI 總結模型為分開運行，建議兩者互相參照對比)")
             
