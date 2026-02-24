@@ -7,12 +7,12 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import time
 from datetime import datetime, timedelta
+import hashlib
 
 # --- 引入重構後的模組 ---
 from database import db
 from api_fetcher import fetch_all_data, get_yahoo_data_sync
 from indicators import calculate_technicals, run_backtest_logic
-from ai_agent import generate_ai_report_stream
 import 投資分析  # 保留雙軌制分析模組
 
 
@@ -354,9 +354,61 @@ if 'analysis_result' not in st.session_state:
     st.session_state['analysis_result'] = None
 if 'etf_result' not in st.session_state:
     st.session_state['etf_result'] = None
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+if 'username' not in st.session_state:
+    st.session_state['username'] = ""
+
+# ---------------------------------------------------------
+# 2. 身份驗證機制 (Authentication)
+# ---------------------------------------------------------
+if not st.session_state['logged_in']:
+    st.markdown("<h1 style='text-align: center; font-family: Outfit;'>🔐 系統登入</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #A0AEC0;'>請先登入或註冊以使用台股 AI 深度戰情室</p>", unsafe_allow_html=True)
+    
+    col_space1, col_auth, col_space2 = st.columns([1, 2, 1])
+    with col_auth:
+        tab_login, tab_register = st.tabs(["🔑 登入", "📝 註冊"])
+        
+        with tab_login:
+            login_user = st.text_input("帳號", key="login_user")
+            login_pass = st.text_input("密碼", type="password", key="login_pass")
+            if st.button("登入", type="primary", use_container_width=True):
+                hashed_pw = hashlib.sha256(login_pass.encode()).hexdigest()
+                if db.verify_user(login_user, hashed_pw):
+                    st.session_state['logged_in'] = True
+                    st.session_state['username'] = login_user
+                    st.success("✅ 登入成功！")
+                    st.rerun()
+                else:
+                    st.error("❌ 帳號或密碼錯誤。")
+                    
+        with tab_register:
+            reg_user = st.text_input("新帳號", key="reg_user")
+            reg_pass1 = st.text_input("密碼", type="password", key="reg_pass1")
+            reg_pass2 = st.text_input("確認密碼", type="password", key="reg_pass2")
+            if st.button("註冊會員", type="secondary", use_container_width=True):
+                if not reg_user or not reg_pass1:
+                    st.warning("⚠️ 請填寫完整資訊。")
+                elif reg_pass1 != reg_pass2:
+                    st.error("❌ 兩次密碼不一致。")
+                else:
+                    hashed_pw = hashlib.sha256(reg_pass1.encode()).hexdigest()
+                    if db.register_user(reg_user, hashed_pw):
+                        st.success("✅ 註冊成功，請切換至登入分頁登入！")
+                    else:
+                        st.error("❌ 該帳號已被註冊，請換一個帳號。")
+    st.stop()  # 中止後方畫面渲染
 
 with st.sidebar:
     st.title("功能選單")
+    st.write(f"🧑‍💻 目前登入: **{st.session_state['username']}**")
+    if st.button("🚪 登出", key="logout_btn"):
+        st.session_state['logged_in'] = False
+        st.session_state['username'] = ""
+        st.rerun()
+    st.markdown("---")
+    
     page = st.radio("前往頁面", ["📊 深度個股儀表板", "📊 ETF 戰情室", "🗄️ 歷史資料庫", "📖 策略邏輯白皮書"])
     
     st.markdown("---")
@@ -368,22 +420,6 @@ with st.sidebar:
         st.header("🔍 ETF 搜尋")
         etf_input = st.text_input("輸入代號 (如 0050)", "0050", key="etf_input")
         etf_btn = st.button("分析 ETF", type="primary", key="etf_btn")
-
-    st.write("---")
-    st.header("🔑 AI 引擎設定")
-    default_key = ""
-    try:
-        default_key = st.secrets.get("GEMINI_API_KEY", "")
-    except Exception:
-        pass
-        
-    if default_key:
-        st.success("✅ AI 引擎已啟用 (由系統安全載入)")
-        gemini_api_key = default_key
-    else:
-        gemini_api_key = st.text_input("輸入 Google Gemini API Key", type="password", help="用於產生真人專家級別的投資報告解析。如果已在 Streamlit Secrets 設定，將會自動載入。")
-        if gemini_api_key:
-            st.success("✅ AI 引擎已啟用 (自訂金鑰)")
 
 # --- 頁面: 個股儀表板 ---
 if page == "📊 深度個股儀表板":
@@ -629,27 +665,6 @@ if page == "📊 深度個股儀表板":
                 st.markdown('</div>', unsafe_allow_html=True)
 
         with tab5:
-            st.subheader("🎯 投資教練報告 (LLM 深度解析)")
-            st.write("除了系統的演算法初判外，您可以呼叫大模型為您總結具體的戰略沙盤推演。")
-            
-            if st.button("✨ 立即生成 AI 深度總結報告", type="primary"):
-                if not gemini_api_key:
-                    st.error("⚠️ 請先於左側邊欄設定您的 [Google Gemini API Key] 才能呼叫大模型引擎！")
-                else:
-                    report_placeholder = st.empty()
-                    try:
-                        stream_gen = generate_ai_report_stream(api_key=gemini_api_key, data=st.session_state['analysis_result'])
-                        full_report = ""
-                        for chunk_text in stream_gen:
-                            full_report += chunk_text
-                            # 加上一個閃爍的光標帶來打字效果
-                            report_placeholder.markdown(full_report + " ▌")
-                            time.sleep(0.02)
-                        report_placeholder.markdown(full_report)
-                    except Exception as e:
-                        st.error(f"發生未預期錯誤: {e}")
-            
-            st.markdown("---")
             st.subheader("🎯 雙軌制投資框架分析報告")
             st.caption("基於獨立財務與技術均線的進場判斷系統 (備註：此判斷邏輯為獨立分析引擎，與上方 AI 總結模型為分開運行，建議兩者互相參照對比)")
             
