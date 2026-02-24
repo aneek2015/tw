@@ -172,8 +172,7 @@ def get_yahoo_data(ticker_symbol):
 def get_twse_data(raw_ticker):
     try:
         url = "https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL"
-        requests.packages.urllib3.disable_warnings() 
-        resp = requests.get(url, timeout=5, verify=False)
+        resp = requests.get(url, timeout=3)
         if resp.status_code == 200:
             data_list = resp.json()
             target = next((x for x in data_list if x["Code"] == raw_ticker), None)

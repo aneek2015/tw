@@ -1,0 +1,112 @@
+# 台股 AI 深度搜索 (Taiwan Stock AI Deep Search - Pro)
+
+這是一個基於 Python 與 Streamlit 打造的**台股全方位分析決策系統**。我們採用獨創的「三引擎 (Tri-Engine)」數據處理架構，整合 Yahoo Finance、FinMind 與證交所 (TWSE) 官方數據，將技術面、基本面與籌碼面融匯於一站式的深度戰情室中，幫助投資人快速診斷個股與 ETF 的體質，並產生 AI 綜合投資評級。
+
+---
+
+## 🚀 核心特色 (Core Features)
+
+- **三引擎數據架構**：
+  - **引擎 A**: `Yahoo Finance` (即時股價、K線、技術指標、財報)
+  - **引擎 B**: `FinMind Open Data` (三大法人買賣超籌碼)
+  - **引擎 C**: `TWSE OpenAPI` (官方權威本益比、淨值比、殖利率)
+- **AI 決策引擎**：基於技術面多空、RSI 過熱度、均線斜率及基本面評分，自動給出 `買入 / 持有 / 賣出 / 觀望` 四種行動建議。
+- **動態估值河流圖**：視覺化呈現目前股價所處的本益比位階 (Implied PE Band)。
+- **專業級技術線圖**：整合 K 線、布林通道、MACD、RSI 與法人籌碼的 Plotly 互動式圖表。
+- **ETF 專屬評估獲利模型**：針對存股族設計，自動體檢 ETF 規模(AUM)、內扣費用、折溢價與產業配置。
+- **歷史策略回測模組**：提供 MA_Cross (黃金交叉) 與 RSI_Reversal 等基礎策略的一年期回測。
+- **本地持久化儲存**：結合 SQLite，可將您的每日分析紀錄與評語一鍵保存至歷史資料庫。
+- **RWD 手機版適配介面**：全新設計的玻璃擬物化 (Glassmorphism) 卡片介面，搭配科技感字體，並完美支援行動裝置瀏覽。
+- **動態策略白皮書**：系統內的「策略邏輯白皮書」頁面會動態讀取外部 `數據處理說明.MD` 內容，確保文件即時同步。
+
+---
+
+## 🛠️ 技術架構 (Tech Stack)
+
+- **Frontend / UI**: `Streamlit`, `Plotly` (Graph Objects / Express)
+- **Backend / Data Processing**: `Python 3`, `Pandas`, `NumPy`
+- **Data Sources**: `yfinance`, `FinMind`, `requests` (TWSE OpenAPI)
+- **Database**: `SQLite3` (本地輕量資料庫)
+
+---
+
+## 📦 安裝與執行 (Installation & Usage)
+
+### 系統需求
+- Python 3.9 或以上版本
+- 穩定網路連線 (需呼叫多個外部 API)
+
+### 快速啟動 (Windows 適用)
+
+我們已為 Windows 用戶準備了自動化批次檔：
+
+1. **環境建置與依賴安裝**：
+   雙擊執行資料夾中的 `修復缺失.bat`。此腳本將自動更新 pip 並安裝所需的套件 (`streamlit`, `yfinance`, `FinMind`, `pandas`, `numpy`, `plotly`, `requests`)。
+
+2. **啟動應用程式**：
+   雙擊執行 `open.bat`。系統將自動啟動 Streamlit 伺服器並在您的預設瀏覽器中開啟 `http://localhost:8501`。
+
+### 手動啟動 (開發者)
+
+若您偏好使用命令列：
+
+```bash
+# 1. 安裝必要套件
+pip install streamlit yfinance FinMind pandas numpy plotly tqdm requests
+
+# 2. 啟動 Streamlit
+streamlit run app.py
+```
+
+---
+
+## ☁️ 雲端部署 (Cloud Deployment)
+
+本專案支援免除本地環境安裝，直接部署至 **Streamlit Community Cloud**。
+
+### 部署步驟
+1. **準備儲存庫**：將本專案所有檔案（包含新建立的 `requirements.txt`）上傳至您的 GitHub 儲存庫。
+2. **登入 Streamlit Cloud**：前往 [Streamlit Community Cloud](https://share.streamlit.io/) 並使用 GitHub 帳號登入。
+3. **新增應用程式**：點擊 `New app`。
+4. **設定部署參數**：
+   - **Repository**: 選擇您的專案儲存庫 (例如 `你的帳號/你的專案名稱`)
+   - **Branch**: `main` (或您設定的主分支)
+   - **Main file path**: 輸入 `app.py`
+5. **點擊 Deploy**：等待系統自動安裝 `requirements.txt` 中指定的依賴套件並啟動服務。
+
+> **⚠️ 雲端資料庫限制注意**：
+> Streamlit Community Cloud 的檔案系統屬於暫時性 (Ephemeral)。當應用程式休眠或重啟時，本地的 `stock_history.db` SQLite 資料庫會被重置清空。若您需要永久保存歷史分析紀錄，建議在本地環境執行本專案。
+
+---
+
+## 📘 使用說明 (User Guide)
+
+本系統提供四大核心頁面，可透過左側邊欄切換：
+
+### 1. 📊 深度個股儀表板
+- 輸入台灣股票代號 (如: `2330`)，點擊「啟動全域掃描」。
+- 系統將載入所有數據並給出 **AI 投資總結**。
+- 提供 5 個子分頁：「專業 K 線」、「基本面」、「估值河流」、「體質健檢」、「策略回測」供您深度研究。
+- 點擊「💾 儲存此筆分析」即可記錄至本地資料庫。
+
+### 2. 🛡️ ETF 戰情室
+- 專為 ETF 設計的體檢系統。輸入代號 (如: `0050`)。
+- 系統將自動判斷 ETF 類型 (市值型/高股息/債券等)，並生成「長期持有適格性報告」。
+- 檢視前十大持股與產業權重分佈。
+
+### 3. 🗄️ 歷史資料庫
+- 查看過去存檔的所有個股分析紀錄與 AI 建議。
+- 支援刪除舊紀錄或將資料表匯出為 `.csv` 檔案。
+
+### 4. 📖 策略邏輯白皮書
+- 內建的系統邏輯說明書，詳述了 AI 評等標準與三引擎的運作原理。
+- **進階閱讀**：更詳細的演算法細節與系統限制，請參閱專案根目錄下的 [`數據處理說明.MD`](數據處理說明.MD)。
+
+---
+
+## ⚠️ 免責聲明 (Disclaimer)
+
+1. 本專案**僅供學術研究與程式開發學習使用**，不構成任何財務或投資建議。
+2. 系統產出之「買入/賣出」等評級僅為程式邏輯運算結果，**不保證獲利**，請自行承擔投資風險。
+3. 本專案使用之第三方免費 API (YF/FinMind) 可能有資料延遲、缺失或隨時變更之風險。作者不對數據的精確性負責。
+4. **回測結果不代表未來表現**，回測模型已省略手續費與滑價等摩擦成本。
