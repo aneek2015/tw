@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Deep Search - Pro</title>
+    <!-- 引入特殊字體: Outfit (標題) 與 Inter (內文) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/theme.css">
+    <link rel="stylesheet" href="styles/components.css">
+</head>
+
+<body class="theme-obsidian">
+
+    <!-- 背景特效 -->
+    <div class="background-effects">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- 側邊欄導航 -->
+    <nav class="sidebar glass-panel">
+        <div class="brand">
+            <h1>AI.DS<span class="highlight">PRO</span></h1>
+            <p>台股深度搜索</p>
+        </div>
+        <ul class="nav-links">
+            <li><button class="nav-btn active" data-target="page-dashboard">📊 深度個股儀表板</button></li>
+            <li><button class="nav-btn" data-target="page-etf">🛡️ ETF 戰情室</button></li>
+            <li><button class="nav-btn" data-target="page-history">🗄️ 歷史資料庫</button></li>
+            <li><button class="nav-btn" data-target="page-docs">📖 策略白皮書</button></li>
+        </ul>
+    </nav>
+
+    <!-- 主內容區 -->
+    <main class="content-area">
+
+        <!-- 全局載入狀態 -->
+        <div id="global-loader" class="loader-container hidden">
+            <div class="spinner"></div>
+            <p id="loader-text">初始化三引擎架構...</p>
+        </div>
+
+        <!-- 頁面 1: 個股儀表板 -->
+        <section id="page-dashboard" class="page-section active">
+            <header class="section-header stagger-1">
+                <h2>🕵️ 台股 AI 深度戰情室</h2>
+                <div class="search-bar">
+                    <input type="text" id="stock-input" placeholder="輸入代號 (如 2330)" value="2330">
+                    <button id="btn-analyze-stock" class="btn-primary glow-effect">啟動全域掃描</button>
+                </div>
+            </header>
+
+            <!-- 分析結果容器 -->
+            <div id="dashboard-results" class="results-container hidden">
+
+                <!-- 狀態卡片 -->
+                <div class="status-card glass-panel stagger-2">
+                    <div class="status-left">
+                        <div class="sub-text">股票代號 | 名稱</div>
+                        <div class="title-text" id="db-title">-- | --</div>
+                        <div class="price-row">
+                            <span id="db-price" class="huge-text">--</span>
+                            <span id="db-change" class="change-text">-- (--%)</span>
+                        </div>
+                        <div class="sub-text micro">資料來源: YF / FinMind / TWSE (CORS Proxy)</div>
+                    </div>
+                    <div class="status-right">
+                        <div class="sub-text">AI 投資總結</div>
+                        <div id="db-signal" class="signal-box">--</div>
+                        <div id="db-reason" class="reason-text">"--"</div>
+                        <button id="btn-save" class="btn-secondary mt-10">💾 儲存此筆分析</button>
+                    </div>
+                </div>
+
+                <!-- 內部 Tab 導航 -->
+                <div class="tabs-nav stagger-3">
+                    <button class="tab-btn active" data-tab="tab-chart">📊 專業K線</button>
+                    <button class="tab-btn" data-tab="tab-fund">🏢 基本面</button>
+                    <button class="tab-btn" data-tab="tab-river">🌊 估值河流</button>
+                    <button class="tab-btn" data-tab="tab-health">🏥 體質健檢</button>
+                    <button class="tab-btn" data-tab="tab-backtest">🧪 策略回測</button>
+                </div>
+
+                <!-- Tab 內容區 -->
+                <div class="tab-content-area glass-panel stagger-4">
+
+                    <div id="tab-chart" class="tab-pane active">
+                        <div id="plotly-kline" style="width:100%; height:750px;"></div>
+                    </div>
+
+                    <div id="tab-fund" class="tab-pane">
+                        <div class="grid-4" id="fund-metrics"></div>
+                        <hr class="cyber-hr">
+                        <h3>📊 財報三率</h3>
+                        <div class="grid-3" id="fund-rates"></div>
+                    </div>
+
+                    <div id="tab-river" class="tab-pane">
+                        <h3 id="river-title">🌊 隱含本益比帶</h3>
+                        <p class="sub-text">採固定倍數推算，非傳統歷史滾動 PE 河流圖</p>
+                        <div id="plotly-river" style="width:100%; height:500px;"></div>
+                    </div>
+
+                    <div id="tab-health" class="tab-pane">
+                        <h3>1. 價格與估值</h3>
+                        <div class="health-card grid-3" id="health-val"></div>
+                        <h3>2. 籌碼健康度</h3>
+                        <div class="health-card grid-3" id="health-chips"></div>
+                    </div>
+
+                    <div id="tab-backtest" class="tab-pane">
+                        <div class="backtest-controls">
+                            <select id="bt-strategy" class="cyber-select">
+                                <option value="MA_Cross">MA_Cross (黃金交叉)</option>
+                                <option value="RSI_Reversal">RSI_Reversal (RSI反轉)</option>
+                            </select>
+                            <button id="btn-run-bt" class="btn-secondary">執行回測</button>
+                        </div>
+                        <p class="sub-text mt-10">使用過去一年數據模擬策略表現 (⚠️ 未計入交易成本，存在前視偏差)</p>
+                        <div class="grid-3 mt-20" id="bt-metrics"></div>
+                        <div id="plotly-backtest" style="width:100%; height:400px; margin-top:20px;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 頁面 2: ETF 戰情室 -->
+        <section id="page-etf" class="page-section">
+            <header class="section-header stagger-1">
+                <h2>🛡️ ETF 戰情室</h2>
+                <div class="search-bar">
+                    <input type="text" id="etf-input" placeholder="輸入代號 (如 0050)" value="0050">
+                    <button id="btn-analyze-etf" class="btn-primary glow-effect">分析 ETF</button>
+                </div>
+            </header>
+            <div id="etf-results" class="results-container hidden">
+                <!-- ETF 動態生成區 -->
+            </div>
+        </section>
+
+        <!-- 頁面 3: 歷史資料庫 -->
+        <section id="page-history" class="page-section">
+            <header class="section-header stagger-1">
+                <h2>🗄️ 投資決策歷史紀錄</h2>
+                <div class="header-actions">
+                    <button id="btn-export-csv" class="btn-secondary">下載 CSV</button>
+                </div>
+            </header>
+            <div class="glass-panel stagger-2 overflow-x-auto">
+                <table id="history-table" class="cyber-table">
+                    <thead>
+                        <tr>
+                            <th>編號</th>
+                            <th>日期</th>
+                            <th>代號</th>
+                            <th>名稱</th>
+                            <th>價位</th>
+                            <th>建議</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 動態插入 -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 頁面 4: 策略白皮書 -->
+        <section id="page-docs" class="page-section">
+            <header class="section-header stagger-1">
+                <h2>📖 數據處理與策略白皮書</h2>
+            </header>
+            <div class="glass-panel stagger-2 prose" id="docs-content">
+                <p>載入中...</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 模組化 JS 進入點 -->
+    <script type="module" src="js/app.js"></script>
+
+    <!-- 載入白皮書 HTML -->
+    <script>
+        fetch('docs/whitepaper.html')
+            .then(r => r.text())
+            .then(html => {
+                document.getElementById('docs-content').innerHTML = html;
+            })
+            .catch(e => {
+                document.getElementById('docs-content').innerHTML = '<p>無法載入說明文件，請確認 docs/whitepaper.html 是否存在。</p>';
+            });
+    </script>
+</body>
+
+</html>

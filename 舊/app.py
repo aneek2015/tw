@@ -19,57 +19,116 @@ st.set_page_config(page_title="簡易台股判斷(Pro)", layout="wide")
 
 st.markdown("""
     <style>
-    /* 全域設定 */
-    .big-font { font-size:28px !important; font-weight: bold; color: #FFFFFF; }
-    .sub-font { font-size:16px !important; color: #DDDDDD; }
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;500;600;700&display=swap');
     
-    /* 資訊卡片容器 */
+    /* 全域設定 */
+    html, body, [class*="css"] {
+        font-family: 'Rajdhani', sans-serif;
+    }
+    
+    .big-font { font-size:28px !important; font-weight: 700; color: #FFFFFF; font-family: 'Orbitron', sans-serif; }
+    .sub-font { font-size:16px !important; color: #A8B2C1; font-weight: 500; }
+    
+    /* 玻璃擬物化卡片容器 */
     .status-card {
-        background-color: #262730;
+        background: linear-gradient(135deg, rgba(38, 39, 48, 0.7), rgba(20, 21, 26, 0.4));
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         padding: 25px;
-        border-radius: 12px;
-        border: 1px solid #444;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         margin-bottom: 25px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        animation: slideUpFade 0.6s ease-out forwards;
+        opacity: 0;
+    }
+    
+    .status-card:nth-child(1) { animation-delay: 0.1s; }
+    .status-card:nth-child(2) { animation-delay: 0.2s; }
+    
+    .status-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
     }
 
     /* 健檢專用卡片 */
     .health-card {
-        background-color: #1E1E1E;
+        background: linear-gradient(145deg, #1E1E1E, #141414);
         padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid #ff4b4b;
+        border-radius: 12px;
+        border-left: 5px solid #ff0055;
         margin-bottom: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        animation: slideUpFade 0.5s ease-out forwards;
+        opacity: 0;
     }
+    .health-card:nth-child(2) { animation-delay: 0.15s; }
+    .health-card:nth-child(4) { animation-delay: 0.25s; }
+    .health-card:nth-child(6) { animation-delay: 0.35s; }
     
     /* 訊號燈與標籤樣式 */
     .signal-box {
         display: inline-block;
-        padding: 5px 15px;
+        padding: 6px 18px;
         border-radius: 8px;
-        font-weight: bold;
+        font-weight: 700;
         font-size: 20px;
         margin-top: 10px;
         border: 1px solid rgba(255,255,255,0.2);
+        font-family: 'Orbitron', sans-serif;
+        letter-spacing: 1px;
     }
     
-    /* 趨勢顏色定義 (紅漲綠跌) */
-    .sig-buy { background-color: #590000; color: #ff4b4b; border-color: #ff4b4b; } 
-    .sig-sell { background-color: #003300; color: #00c07c; border-color: #00c07c; } 
-    .sig-hold { background-color: #002244; color: #4e8cff; border-color: #4e8cff; } 
-    .sig-wait { background-color: #333333; color: #aaaaaa; border-color: #aaaaaa; } 
+    /* 趨勢顏色定義 (紅漲綠跌) - 提升彩度與科技感 */
+    .sig-buy { background-color: rgba(255, 0, 85, 0.15); color: #ff0055; border-color: #ff0055; text-shadow: 0 0 10px rgba(255,0,85,0.4); } 
+    .sig-sell { background-color: rgba(0, 255, 170, 0.15); color: #00ffaa; border-color: #00ffaa; text-shadow: 0 0 10px rgba(0,255,170,0.4); } 
+    .sig-hold { background-color: rgba(0, 153, 255, 0.15); color: #0099ff; border-color: #0099ff; text-shadow: 0 0 10px rgba(0,153,255,0.4); } 
+    .sig-wait { background-color: rgba(170, 170, 170, 0.15); color: #aaaaaa; border-color: #aaaaaa; } 
 
-    .trend-up { color: #ff4b4b !important; font-weight: bold; }
-    .trend-down { color: #00c07c !important; font-weight: bold; }
-    .trend-neutral { color: #aaaaaa !important; font-weight: bold; }
+    .trend-up { color: #ff0055 !important; font-weight: 700; text-shadow: 0 0 8px rgba(255,0,85,0.3); }
+    .trend-down { color: #00ffaa !important; font-weight: 700; text-shadow: 0 0 8px rgba(0,255,170,0.3); }
+    .trend-neutral { color: #aaaaaa !important; font-weight: 700; }
     
     /* 說明區塊 */
     .logic-box {
-        background-color: #1E1E1E;
-        padding: 15px;
-        border-left: 4px solid #FFD700;
-        margin-bottom: 10px;
+        background: rgba(30, 30, 30, 0.6);
+        backdrop-filter: blur(8px);
+        padding: 18px;
+        border-left: 4px solid #00ffaa;
+        margin-bottom: 12px;
         color: #E0E0E0;
+        border-radius: 0 8px 8px 0;
+    }
+    
+    /* 動畫定義 */
+    @keyframes slideUpFade {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* 響應式佈局 (Mobile Responsiveness) */
+    @media (max-width: 768px) {
+        .flex-container {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+        .flex-item-right {
+            text-align: left !important;
+            margin-top: 15px !important;
+        }
+        .big-font { font-size: 22px !important; }
+        .sub-font { font-size: 14px !important; }
+        .price-text { font-size: 32px !important; }
+        .price-change { font-size: 18px !important; margin-left: 0 !important; display: block; margin-top: 5px;}
+        .status-card { padding: 15px; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -147,7 +206,7 @@ def get_yahoo_data(ticker_symbol):
             stock = yf.Ticker(ticker_symbol)
             df = stock.history(period="1y")
         
-        if df.empty: return None, None, None, None, None, None
+        if df.empty: return None, None, None, None
         
         if df.index.tz is not None:
             df.index = df.index.tz_localize(None)
@@ -157,16 +216,10 @@ def get_yahoo_data(ticker_symbol):
         if divs.index.tz is not None:
             divs.index = divs.index.tz_localize(None)
 
-        try: financials = stock.financials
-        except: financials = pd.DataFrame()
-        
-        try: cashflow = stock.cashflow
-        except: cashflow = pd.DataFrame()
-
-        return df, info, ticker_symbol, divs, financials, cashflow
+        return df, info, ticker_symbol, divs
     except Exception as e:
         print(f"yfinance error for {ticker_symbol}: {e}")
-        return None, None, None, None, None, None
+        return None, None, None, None
 
 @st.cache_data(ttl=1800)
 def get_twse_data(raw_ticker):
@@ -217,11 +270,9 @@ class StockAnalyzer:
         self.info = {}
         self.chips_df = pd.DataFrame()
         self.dividends = pd.Series(dtype=float)
-        self.financials = pd.DataFrame()
-        self.cashflow = pd.DataFrame()
 
     def run_analysis(self):
-        df, info, real_ticker, divs, financials, cashflow = get_yahoo_data(self.yf_ticker_name)
+        df, info, real_ticker, divs = get_yahoo_data(self.yf_ticker_name)
         if df is None: return False
         
         self.price_history = df
@@ -229,8 +280,6 @@ class StockAnalyzer:
         self.yf_ticker_name = real_ticker 
         self.stock_name = info.get('longName', info.get('shortName', self.raw_ticker))
         self.dividends = divs
-        self.financials = financials
-        self.cashflow = cashflow
         
         self.chips_df = get_finmind_chips(self.raw_ticker)
         
@@ -388,7 +437,7 @@ class ETFAnalyzer:
     def fetch_data(self):
         try:
             # 1. 價格與基礎資訊
-            df, info, _, _, _, _ = get_yahoo_data(self.yf_ticker_name)
+            df, info, _, _ = get_yahoo_data(self.yf_ticker_name)
             if df is None or info is None: return False
             
             # 2. 持股與權重
@@ -558,19 +607,19 @@ if page == "📊 深度個股儀表板":
 
         st.markdown(f"""
         <div class="status-card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="flex-container" style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
                     <div class="sub-font">股票代號 | 名稱</div>
                     <div class="big-font" style="margin-bottom: 5px;">{data['ticker']} | {stock_name}</div>
                     <div>
-                        <span style="font-size: 42px; line-height: 1;" class="{trend_class}">{current_price:.2f}</span>
-                        <span style="font-size: 22px; margin-left: 15px;" class="{trend_class}">
+                        <span style="font-size: 42px; line-height: 1;" class="price-text {trend_class}">{current_price:.2f}</span>
+                        <span style="font-size: 22px; margin-left: 15px;" class="price-change {trend_class}">
                             {sign}{change:.2f} ({sign}{pct:.2f}%)
                         </span>
                     </div>
                     <div class="sub-font" style="margin-top: 5px; font-size: 12px;">資料來源: YF / FinMind / TWSE (Auto-Cached)</div>
                 </div>
-                <div style="text-align: right; max-width: 400px;">
+                <div class="flex-item-right" style="text-align: right; max-width: 400px;">
                     <div class="sub-font">AI 投資總結</div>
                     <div class="signal-box {data['verdict_class']}">{data['verdict']}</div>
                     <div style="margin-top: 8px; color: #BBB; font-size: 14px;">
@@ -593,7 +642,7 @@ if page == "📊 深度個股儀表板":
                 )
                 st.success(f"✅ 已存檔！")
 
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 專業K線", "🏢 基本面", "🌊 估值河流", "🏥 體質健檢", "🎯 投資分析", "🧪 策略回測"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 專業K線", "🏢 基本面", "🌊 估值河流", "🏥 體質健檢", "🧪 策略回測"])
 
         with tab1:
             tech_df = data['tech_df']
@@ -722,105 +771,6 @@ if page == "📊 深度個股儀表板":
                 st.markdown('</div>', unsafe_allow_html=True)
 
         with tab5:
-            st.subheader("🎯 雙軌制投資框架分析報告")
-            st.caption("基於獨立財務與技術均線的進場判斷系統 (備註：此判斷邏輯為獨立分析引擎，與上方 AI 總結模型為分開運行，建議兩者互相參照對比)")
-            
-            # --- 一、財務表現定量過濾 ---
-            st.markdown("### [一、財務表現定量過濾]")
-            info = analyzer.info
-            fin = analyzer.financials
-            cf = analyzer.cashflow
-            
-            c1, c2, c3 = st.columns(3)
-            # 1. 營收規模
-            rev = info.get('totalRevenue', 0)
-            rev_usd = (rev / 32) if rev else 0
-            rev_pass = "🟢 通過" if rev_usd > 100000000 else "🔴 未通過"
-            c1.metric("營收規模 (>1億美元)", f"{rev_pass}", f"約 {rev_usd/1e8:.2f} 億鎂", delta_color="normal" if rev_usd > 100000000 else "inverse")
-            
-            # 2. 營收增長率
-            rev_growth = info.get('revenueGrowth', 0)
-            rev_growth_pct = rev_growth * 100 if rev_growth else 0
-            if 15 <= rev_growth_pct <= 20: g_label = "🟢 完美黃金區間"
-            elif rev_growth_pct > 40: g_label = "🔴 危險 (超高速增長)"
-            elif rev_growth_pct < 10: g_label = "🔴 警告 (增長瓶頸)"
-            else: g_label = "🟡 一般範圍"
-            c2.metric("營收增長率 (15-20%)", f"{rev_growth_pct:.2f}%", g_label, delta_color="off")
-            
-            # 3. 利潤與現金流
-            try: ebit = fin.loc['EBIT'].iloc[0] if 'EBIT' in fin.index else info.get('ebitda', 0)
-            except: ebit = 0
-            try:
-                ocf = cf.loc['Operating Cash Flow'].iloc[0] if 'Operating Cash Flow' in cf.index else 0
-                fcf = cf.loc['Free Cash Flow'].iloc[0] if 'Free Cash Flow' in cf.index else 0
-            except: ocf, fcf = 0, 0
-            
-            ebit_pass = "🟢 Pass" if ebit > 0 else "🔴 Fail"
-            ocf_pass = "🟢 Pass" if ocf > 0 else "🔴 Fail"
-            fcf_pass = "🟢 Pass" if fcf > 0 else "🔴 Fail"
-            c3.markdown(f"**營業利潤 (EBIT > 0)**: {ebit_pass}  \n**營運現金流 (OCF > 0)**: {ocf_pass}  \n**自由現金流 (FCF > 0)**: {fcf_pass}")
-
-            st.markdown("---")
-            # --- 二、市場估值與預期心理 ---
-            st.markdown("### [二、市場估值與預期心理]")
-            ps = info.get('priceToSalesTrailing12Months', 0)
-            pb = info.get('priceToBook', 0)
-            sc1, sc2 = st.columns(2)
-            sc1.metric("市銷率 (PS)", f"{ps:.2f}" if ps else "N/A")
-            sc2.metric("市淨率 (PB)", f"{pb:.2f}" if pb else "N/A")
-            st.info("💡 **指標解讀**：若高於歷史平均或同業，代表市場預期已極度樂觀，後續財報容錯率極低。")
-
-            st.markdown("---")
-            # --- 三、技術面戰術執行 (趨勢時鐘) ---
-            st.markdown("### [三、技術面戰術執行 (趨勢時鐘)]")
-            
-            if len(data['price_history']) < 60:
-                st.warning("歷史股價資料不足 60 天，無法計算趨勢時鐘。")
-            else:
-                hist = data['price_history']
-                curr_p = hist['Close'].iloc[-1]
-                m20 = hist['Close'].rolling(window=20).mean().iloc[-1]
-                m60 = hist['Close'].rolling(window=60).mean().iloc[-1]
-                m20_prev = hist['Close'].rolling(window=20).mean().iloc[-6]
-                
-                ma20_slope = (m20 - m20_prev) / m20_prev * 100
-                dist_to_ma20 = (curr_p - m20) / m20 * 100
-                
-                c_status = ""
-                box_color = ""
-                if dist_to_ma20 > 15 and ma20_slope > 2:
-                    c_status = "12點至1點鐘方向 🔴 (危險區域：極端樂觀拋物線暴漲，嚴禁追高，應準備獲利了結)"
-                    box_color = "error"
-                elif curr_p > m20 and m20 > m60 and ma20_slope > 0:
-                    c_status = "2點鐘方向 🟢 (黃金操作區：趨勢健康，這是本框架唯一許可的建倉方位)"
-                    box_color = "success"
-                elif abs(ma20_slope) < 1.5 and abs(curr_p - m20)/m20 < 0.05:
-                    c_status = "3點鐘方向 🟡 (觀望區域：橫盤震盪中，市場缺乏方向感)"
-                    box_color = "warning"
-                elif curr_p < m20 and ma20_slope < 0 and dist_to_ma20 > -15:
-                    c_status = "4點鐘方向 🔴 (迴避區域：緩跌格局，嚴禁以抄底為由買入)"
-                    box_color = "error"
-                elif curr_p < m20 and dist_to_ma20 <= -15:
-                    c_status = "5點至6點鐘方向 🔴 (災難區域：垂直崩潰，伴隨恐慌拋售，絕對禁止介入)"
-                    box_color = "error"
-                else:
-                    c_status = "趨勢過渡期 (需開啟線圖人工確認)"
-                    box_color = "info"
-                    
-                st.markdown(f"**趨勢時鐘定位：** {c_status}")
-                tc1, tc2, tc3 = st.columns(3)
-                tc1.metric("現價", f"{curr_p:.2f}")
-                tc2.metric("月線 (MA20)", f"{m20:.2f}")
-                tc3.metric("季線 (MA60)", f"{m60:.2f}")
-
-                if box_color == "success":
-                    st.success("💡 **【戰術執行指令】**\n\n符合條件！請開啟看盤軟體尋找下方「歷史籌碼峰」，在其支撐位附近掛單買入。\n並務必將不可妥協的「底線(停損)」設立於籌碼峰下方，若跌破無條件平倉！")
-                elif box_color == "error" or box_color == "warning":
-                    st.error("💡 **【戰術執行指令】**\n\n目前不符合 2 點鐘黃金操作區的買入標準，建議觀望或尋找其他標的。")
-                else:
-                    st.info("💡 **【戰術執行指令】**\n\n目前處於趨勢過渡期，方向不明確。建議縮小資金規模或場外觀望。")
-
-        with tab6:
             st.subheader("🧪 歷史策略回測")
             st.caption("使用過去一年數據模擬策略表現 (⚠️ 註：未計入交易成本，且訊號依賴當日收盤價，存在前視偏差)")
             
@@ -883,18 +833,18 @@ elif page == "📊 ETF 戰情室":
 
         st.markdown(f"""
         <div class="status-card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="flex-container" style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
                     <div class="sub-font">ETF 代號 | 名稱 | 類型</div>
                     <div class="big-font" style="margin-bottom: 5px;">{data['name']} <span style="font-size:16px; color:#aaa;">({m['Type']})</span></div>
                     <div>
-                        <span style="font-size: 42px; line-height: 1;" class="{trend_class}">{current_price:.2f}</span>
-                        <span style="font-size: 22px; margin-left: 15px;" class="{trend_class}">
+                        <span style="font-size: 42px; line-height: 1;" class="price-text {trend_class}">{current_price:.2f}</span>
+                        <span style="font-size: 22px; margin-left: 15px;" class="price-change {trend_class}">
                             {sign}{change:.2f} ({sign}{(change/price_history['Close'].iloc[-2]*100):.2f}%)
                         </span>
                     </div>
                 </div>
-                <div style="text-align: right;">
+                <div class="flex-item-right" style="text-align: right;">
                     <div class="sub-font">總資產規模 (AUM)</div>
                     <div class="big-font">{m['AUM'] / 100000000:.2f} 億</div>
                     <div class="sub-font" style="margin-top:5px;">費用率: {m['ExpenseRatio']*100:.2f}% | 殖利率: {m['Yield']*100:.2f}%</div>
@@ -1002,9 +952,7 @@ elif page == "📖 策略邏輯白皮書":
     
     try:
         with open("數據處理說明.MD", "r", encoding="utf-8") as f:
-            markdown_content = f.read()
-        st.markdown(markdown_content)
-    except FileNotFoundError:
-        st.error("無法找到 `數據處理說明.MD` 檔案，請確認檔案是否存在於專案根目錄中。")
+            md_content = f.read()
+        st.markdown(md_content, unsafe_allow_html=True)
     except Exception as e:
-        st.error(f"讀取文件時發生錯誤: {e}")
+        st.error(f"無法載入白皮書檔案 ({e})")
