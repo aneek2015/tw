@@ -36,7 +36,7 @@ def calculate_technicals(price_history: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-def run_backtest_logic(df: pd.DataFrame, strategy_type: str = "MA_Cross") -> dict:
+def run_backtest_logic(df: pd.DataFrame, strategy_type: str = "MA_Cross", **kwargs) -> dict:
     """執行基礎回測並計算績效"""
     if df is None or len(df) == 0:
         return None
@@ -45,16 +45,37 @@ def run_backtest_logic(df: pd.DataFrame, strategy_type: str = "MA_Cross") -> dic
     df['Signal'] = 0
     
     if "MA_Cross" in strategy_type:
-        df['Signal'] = np.where(df['MA5'] > df['MA20'], 1, -1)
-        df['Position'] = np.where(df['MA5'] > df['MA20'], 1, 0)
+        fast_window = kwargs.get('fast_ma', 5)
+        slow_window = kwargs.get('slow_ma', 20)
+        fast_col = f'MA_Test_{fast_window}'
+        slow_col = f'MA_Test_{slow_window}'
+        
+        df[fast_col] = df['Close'].rolling(window=fast_window).mean()
+        df[slow_col] = df['Close'].rolling(window=slow_window).mean()
+        
+        df['Signal'] = np.where(df[fast_col] > df[slow_col], 1, -1)
+        df['Position'] = np.where(df[fast_col] > df[slow_col], 1, 0)
+        
     elif "RSI_Reversal" in strategy_type:
-        conditions = [(df['RSI'] < 30), (df['RSI'] > 70)]
+        rsi_low = kwargs.get('rsi_low', 30)
+        rsi_high = kwargs.get('rsi_high', 70)
+        conditions = [(df['RSI'] < rsi_low), (df['RSI'] > rsi_high)]
         choices = [1, 0]
         df['Position'] = np.select(conditions, choices, default=np.nan)
         df['Position'] = df['Position'].ffill().fillna(0)
+        
+    elif "MACD_Hist" in strategy_type:
+        df['Signal'] = np.where(df['MACD_Hist'] > 0, 1, -1)
+        df['Position'] = np.where(df['MACD_Hist'] > 0, 1, 0)
 
     df['Daily_Ret'] = df['Close'].pct_change()
-    df['Strategy_Ret'] = df['Position'].shift(1) * df['Daily_Ret']
+    
+    # 加入交易成本計算估計
+    commission = kwargs.get('commission', 0.002) # 預設單邊 0.2% (手續費+滑價)
+    df['Trade'] = df['Position'].diff().abs()
+    trade_costs = df['Trade'] * commission
+    
+    df['Strategy_Ret'] = df['Position'].shift(1) * df['Daily_Ret'] - trade_costs.fillna(0)
     df['Cum_Ret'] = (1 + df['Strategy_Ret']).cumprod()
     df['Benchmark_Ret'] = (1 + df['Daily_Ret']).cumprod()
     

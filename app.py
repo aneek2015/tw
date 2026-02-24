@@ -218,9 +218,9 @@ class StockAnalyzer:
             "dividend": dividend_data
         }
 
-    def run_backtest(self, strategy_type="MA_Cross"):
+    def run_backtest(self, strategy_type="MA_Cross", **kwargs):
         df = self.calculate_technicals()
-        return run_backtest_logic(df, strategy_type)
+        return run_backtest_logic(df, strategy_type, **kwargs)
 
     def determine_verdict(self, tech_df, fund_data):
         if tech_df is None: return "資料不足", "sig-wait", "K線數據過少"
@@ -712,12 +712,32 @@ if page == "📊 深度個股儀表板":
 
         with tab6:
             st.subheader("🧪 歷史策略回測")
-            st.caption("使用過去一年數據模擬策略表現 (⚠️ 註：未計入交易成本，且訊號依賴當日收盤價，存在前視偏差)")
+            st.caption("使用過去一年數據模擬策略表現 (包含簡單交易成本與可自訂參數的估算)")
             
-            strat = st.selectbox("選擇策略", ["MA_Cross (黃金交叉)", "RSI_Reversal (RSI反轉)"])
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                strat = st.selectbox("選擇策略", ["MA_Cross (均線交叉)", "RSI_Reversal (RSI反轉)", "MACD_Hist (MACD柱狀體)"])
+                commission_pct = st.number_input("單邊交易成本 (%)", min_value=0.0, max_value=1.0, value=0.2, step=0.05)
+            
+            kwargs = {'commission': commission_pct / 100.0}
+            
+            with col_b2:
+                if "MA_Cross" in strat:
+                    fast_ma = st.number_input("短天期均線", min_value=1, max_value=60, value=5)
+                    slow_ma = st.number_input("長天期均線", min_value=2, max_value=240, value=20)
+                    kwargs['fast_ma'] = fast_ma
+                    kwargs['slow_ma'] = slow_ma
+                elif "RSI_Reversal" in strat:
+                    rsi_low = st.number_input("RSI 超賣(買進)閾值", min_value=10, max_value=50, value=30)
+                    rsi_high = st.number_input("RSI 超買(賣出)閾值", min_value=50, max_value=90, value=70)
+                    kwargs['rsi_low'] = rsi_low
+                    kwargs['rsi_high'] = rsi_high
+                else:
+                    st.info("MACD 柱狀體策略：柱狀體大於 0 時作多，反之平倉。")
             
             if st.button("執行回測"):
-                res = analyzer.run_backtest(strat)
+                strat_key = strat.split(" ")[0]
+                res = analyzer.run_backtest(strat_key, **kwargs)
                 if res:
                     c1, c2, c3 = st.columns(3)
                     c1.metric("策略總報酬", f"{res['total_return']:.2f}%", delta_color="normal")

@@ -71,29 +71,48 @@ def get_finmind_chips_sync(raw_ticker):
         print(f"FinMind API error for {raw_ticker}: {e}")
         return None
 
-# 非同步 TWSE 請求
-async def fetch_twse_data_async(raw_ticker):
-    url = "https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL"
+# 非同步 TWSE/TPEx 請求
+async def fetch_twse_tpex_data_async(raw_ticker):
+    twse_url = "https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL"
+    tpex_url = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis"
     try:
         async with httpx.AsyncClient(verify=False, timeout=10) as client:
-            resp = await client.get(url)
-            if resp.status_code == 200:
-                data_list = resp.json()
-                target = next((x for x in data_list if x["Code"] == raw_ticker), None)
+            twse_task = client.get(twse_url)
+            tpex_task = client.get(tpex_url)
+            
+            twse_resp, tpex_resp = await asyncio.gather(twse_task, tpex_task, return_exceptions=True)
+            
+            def clean(v): 
+                try: return float(str(v).replace(",", ""))
+                except: return 0.0
+                
+            # 檢查上市 (TWSE)
+            if isinstance(twse_resp, httpx.Response) and twse_resp.status_code == 200:
+                data_list = twse_resp.json()
+                target = next((x for x in data_list if x.get("Code") == raw_ticker), None)
                 if target:
-                    def clean(v): 
-                        try: return float(v.replace(",", ""))
-                        except: return 0.0
                     return {
-                        "source": "TWSE (官方)",
+                        "source": "TWSE (上市)",
                         "PE": clean(target["PEratio"]),
                         "Yield": clean(target["DividendYield"]),
                         "PB": clean(target["PBratio"])
                     }
+            
+            # 檢查上櫃 (TPEx)
+            if isinstance(tpex_resp, httpx.Response) and tpex_resp.status_code == 200:
+                data_list = tpex_resp.json()
+                target = next((x for x in data_list if x.get("SecuritiesCompanyCode") == raw_ticker), None)
+                if target:
+                    return {
+                        "source": "TPEx (上櫃)",
+                        "PE": clean(target["PERatio"]),
+                        "Yield": clean(target["DividendYield"]),
+                        "PB": clean(target["PBRatio"])
+                    }
+                    
     except Exception as e:
-        print(f"TWSE API error for {raw_ticker}: {e}")
+        print(f"TWSE/TPEx API error for {raw_ticker}: {e}")
     
-    # 備案 (可後續補上 TPEx 上櫃嘗試)
     return None
 
 # --- 2. 封裝外部非同步層以供 Streamlit (同步環境) 呼叫 ---
@@ -105,10 +124,10 @@ async def _fetch_all_data_async(raw_ticker, yf_ticker_name):
     # 使用 run_in_executor 讓同步的 (YF, FinMind) 能被非同步等待
     task_yf = loop.run_in_executor(None, _get_yahoo_data_sync_inner, yf_ticker_name)
     task_finmind = loop.run_in_executor(None, get_finmind_chips_sync, raw_ticker)
-    task_twse = asyncio.create_task(fetch_twse_data_async(raw_ticker))
+    task_official = asyncio.create_task(fetch_twse_tpex_data_async(raw_ticker))
     
     # 並發等待三個 API 回應
-    results = await asyncio.gather(task_yf, task_finmind, task_twse)
+    results = await asyncio.gather(task_yf, task_finmind, task_official)
     return results
 
 @st.cache_data(ttl=900, show_spinner=False)
