@@ -4,7 +4,9 @@ import numpy as np
 import os
 import sqlite3
 import requests
-from app import StockAnalyzer, ETFAnalyzer, HistoryDB, get_yahoo_data
+from app import StockAnalyzer, ETFAnalyzer
+from database import HistoryDB
+from api_fetcher import get_yahoo_data_sync
 
 # === 測資與 Mock 準備 ===
 @pytest.fixture
@@ -105,3 +107,10 @@ def test_twse_api_live():
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) > 0 # 確認至少有資料
+
+# ETFAnalyzer 初始化測試
+def test_etf_analyzer_init():
+    etf = ETFAnalyzer("0050")
+    assert etf.raw_ticker == "0050"
+    assert etf.yf_ticker_name == "0050.TW"
+    assert etf.ticker is not None

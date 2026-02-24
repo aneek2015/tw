@@ -1,16 +1,19 @@
 import streamlit as st
 import yfinance as yf
-from FinMind.data import DataLoader
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import time
-import sqlite3
-import requests
-import threading
 from datetime import datetime, timedelta
+
+# --- 引入重構後的模組 ---
+from database import db
+from api_fetcher import fetch_all_data, get_yahoo_data_sync
+from indicators import calculate_technicals, run_backtest_logic
+import 投資分析  # 保留雙軌制分析模組
+
 
 # ---------------------------------------------------------
 # 1. 頁面配置與深色系 CSS
@@ -19,195 +22,93 @@ st.set_page_config(page_title="簡易台股判斷(Pro)", layout="wide")
 
 st.markdown("""
     <style>
+    /* --- Crystalline Market: Glassmorphism Theme --- */
     /* 全域設定 */
-    .big-font { font-size:28px !important; font-weight: bold; color: #FFFFFF; }
-    .sub-font { font-size:16px !important; color: #DDDDDD; }
+    .big-font { font-size: 32px !important; font-weight: 800; color: #FFFFFF; font-family: 'Outfit', sans-serif; }
+    .sub-font { font-size: 14px !important; color: #A0AEC0; font-family: 'Inter', sans-serif; letter-spacing: 1px; text-transform: uppercase;}
     
-    /* 資訊卡片容器 */
+    /* 資訊卡片容器: 玻璃擬物化 Glassmorphism */
     .status-card {
-        background-color: #262730;
+        background: rgba(25, 30, 45, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         padding: 25px;
-        border-radius: 12px;
-        border: 1px solid #444;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         margin-bottom: 25px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .status-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
     }
 
     /* 健檢專用卡片 */
     .health-card {
-        background-color: #1E1E1E;
+        background: linear-gradient(145deg, rgba(30, 30, 30, 0.8) 0%, rgba(20, 20, 20, 0.9) 100%);
         padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid #ff4b4b;
+        border-radius: 12px;
+        border-left: 4px solid #00F0FF;
         margin-bottom: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
     
-    /* 訊號燈與標籤樣式 */
+    /* 訊號燈與標籤樣式 (Neon glow) */
     .signal-box {
         display: inline-block;
-        padding: 5px 15px;
-        border-radius: 8px;
-        font-weight: bold;
-        font-size: 20px;
-        margin-top: 10px;
-        border: 1px solid rgba(255,255,255,0.2);
+        padding: 8px 20px;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 18px;
+        margin-top: 15px;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
     }
     
-    /* 趨勢顏色定義 (紅漲綠跌) */
-    .sig-buy { background-color: #590000; color: #ff4b4b; border-color: #ff4b4b; } 
-    .sig-sell { background-color: #003300; color: #00c07c; border-color: #00c07c; } 
-    .sig-hold { background-color: #002244; color: #4e8cff; border-color: #4e8cff; } 
-    .sig-wait { background-color: #333333; color: #aaaaaa; border-color: #aaaaaa; } 
+    /* 趨勢顏色定義與霓虹光暈 */
+    .sig-buy { 
+        background: rgba(255, 30, 86, 0.15); 
+        color: #FF1E56; 
+        border: 1px solid #FF1E56; 
+        box-shadow: 0 0 15px rgba(255, 30, 86, 0.3);
+    } 
+    .sig-sell { 
+        background: rgba(0, 255, 136, 0.15); 
+        color: #00FF88; 
+        border: 1px solid #00FF88; 
+        box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+    } 
+    .sig-hold { 
+        background: rgba(0, 195, 255, 0.15); 
+        color: #00C3FF; 
+        border: 1px solid #00C3FF; 
+        box-shadow: 0 0 15px rgba(0, 195, 255, 0.3);
+    } 
+    .sig-wait { 
+        background: rgba(150, 150, 150, 0.15); 
+        color: #CCCCCC; 
+        border: 1px solid #888888; 
+    } 
 
-    .trend-up { color: #ff4b4b !important; font-weight: bold; }
-    .trend-down { color: #00c07c !important; font-weight: bold; }
-    .trend-neutral { color: #aaaaaa !important; font-weight: bold; }
+    .trend-up { color: #FF1E56 !important; font-weight: 800; }
+    .trend-down { color: #00FF88 !important; font-weight: 800; }
+    .trend-neutral { color: #A0AEC0 !important; font-weight: 800; }
     
     /* 說明區塊 */
     .logic-box {
-        background-color: #1E1E1E;
-        padding: 15px;
-        border-left: 4px solid #FFD700;
-        margin-bottom: 10px;
-        color: #E0E0E0;
+        background: rgba(20, 20, 25, 0.7);
+        padding: 16px;
+        border-radius: 8px;
+        border-left: 4px solid #FF00FF;
+        margin-bottom: 12px;
+        color: #E2E8F0;
+        font-size: 14px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# ---------------------------------------------------------
-# 2. 資料庫管理模組
-# ---------------------------------------------------------
-
-class HistoryDB:
-    def __init__(self, db_name="stock_history.db"):
-        self.db_name = db_name
-        self.lock = threading.Lock()
-        self.init_db()
-
-    def init_db(self):
-        with self.lock:
-            conn = sqlite3.connect(self.db_name, check_same_thread=False, timeout=10)
-            c = conn.cursor()
-            c.execute('''CREATE TABLE IF NOT EXISTS history
-                         (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          analysis_date TEXT,
-                          ticker TEXT,
-                          stock_name TEXT,
-                          close_price REAL,
-                          verdict TEXT,
-                          reason TEXT,
-                          eps REAL,
-                          roe REAL,
-                          pe REAL)''')
-            conn.commit()
-            conn.close()
-
-    def add_record(self, ticker, name, price, verdict, reason, eps, roe, pe):
-        with self.lock:
-            conn = sqlite3.connect(self.db_name, check_same_thread=False, timeout=10)
-            c = conn.cursor()
-            date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            eps = eps if eps else 0.0
-            roe = roe if roe else 0.0
-            pe = pe if pe else 0.0
-            c.execute("INSERT INTO history (analysis_date, ticker, stock_name, close_price, verdict, reason, eps, roe, pe) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                      (date_str, ticker, name, price, verdict, reason, eps, roe, pe))
-            conn.commit()
-            conn.close()
-
-    def get_all_records(self):
-        with self.lock:
-            conn = sqlite3.connect(self.db_name, check_same_thread=False, timeout=10)
-            df = pd.read_sql_query("SELECT * FROM history ORDER BY id DESC", conn)
-            conn.close()
-            return df
-
-    def delete_record(self, record_id):
-        with self.lock:
-            conn = sqlite3.connect(self.db_name, check_same_thread=False, timeout=10)
-            c = conn.cursor()
-            c.execute("DELETE FROM history WHERE id=?", (record_id,))
-            conn.commit()
-            conn.close()
-
-db = HistoryDB()
-
-# ---------------------------------------------------------
-# 3. 三引擎核心數據處理 (整合快取與時區修復)
-# ---------------------------------------------------------
-
-@st.cache_data(ttl=300)
-def get_yahoo_data(ticker_symbol):
-    try:
-        stock = yf.Ticker(ticker_symbol)
-        df = stock.history(period="1y")
-        
-        if df.empty:
-            ticker_symbol = ticker_symbol.replace(".TW", ".TWO")
-            stock = yf.Ticker(ticker_symbol)
-            df = stock.history(period="1y")
-        
-        if df.empty: return None, None, None, None, None, None
-        
-        if df.index.tz is not None:
-            df.index = df.index.tz_localize(None)
-        
-        info = stock.info
-        divs = stock.dividends
-        if divs.index.tz is not None:
-            divs.index = divs.index.tz_localize(None)
-
-        try: financials = stock.financials
-        except: financials = pd.DataFrame()
-        
-        try: cashflow = stock.cashflow
-        except: cashflow = pd.DataFrame()
-
-        return df, info, ticker_symbol, divs, financials, cashflow
-    except Exception as e:
-        print(f"yfinance error for {ticker_symbol}: {e}")
-        return None, None, None, None, None, None
-
-@st.cache_data(ttl=1800)
-def get_twse_data(raw_ticker):
-    try:
-        url = "https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL"
-        requests.packages.urllib3.disable_warnings() 
-        resp = requests.get(url, timeout=5, verify=False)
-        if resp.status_code == 200:
-            data_list = resp.json()
-            target = next((x for x in data_list if x["Code"] == raw_ticker), None)
-            if target:
-                def clean(v): 
-                    try: return float(v.replace(",", ""))
-                    except: return 0.0
-                return {
-                    "source": "TWSE (官方)",
-                    "PE": clean(target["PEratio"]),
-                    "Yield": clean(target["DividendYield"]),
-                    "PB": clean(target["PBratio"])
-                }
-    except Exception as e:
-        print(f"TWSE API error for {raw_ticker}: {e}")
-    return None
-
-@st.cache_data(ttl=3600)
-def get_finmind_chips(raw_ticker):
-    try:
-        dl = DataLoader()
-        start_date = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
-        df = dl.taiwan_stock_institutional_investors(
-            stock_id=raw_ticker,
-            start_date=start_date
-        )
-        if df.empty: return None
-        
-        df['net'] = df['buy'] - df['sell']
-        df_daily = df.groupby('date')[['buy', 'sell', 'net']].sum().reset_index()
-        return df_daily
-    except Exception as e:
-        print(f"FinMind API error for {raw_ticker}: {e}")
-        return None
+# (資料庫與 API 操作已拆分至獨立模組 database.py 與 api_fetcher.py)
 
 class StockAnalyzer:
     def __init__(self, ticker_input):
@@ -222,7 +123,11 @@ class StockAnalyzer:
         self.cashflow = pd.DataFrame()
 
     def run_analysis(self):
-        df, info, real_ticker, divs, financials, cashflow = get_yahoo_data(self.yf_ticker_name)
+        # 呼叫非同步拉取模組 (取代原本的三個獨立 call)
+        results = fetch_all_data(self.raw_ticker, self.yf_ticker_name)
+        yf_payload, finmind_df, twse_val = results
+        
+        df, info, real_ticker, divs, financials, cashflow = yf_payload
         if df is None: return False
         
         self.price_history = df
@@ -233,41 +138,18 @@ class StockAnalyzer:
         self.financials = financials
         self.cashflow = cashflow
         
-        self.chips_df = get_finmind_chips(self.raw_ticker)
+        self.chips_df = finmind_df
+        # 保存 twse_val 以供後續取出
+        self.twse_val = twse_val
         
         return True
 
     def calculate_technicals(self):
-        df = self.price_history.copy()
-        if len(df) < 60: return None
-
-        df['MA5'] = df['Close'].rolling(window=5).mean()
-        df['MA20'] = df['Close'].rolling(window=20).mean()
-        df['MA60'] = df['Close'].rolling(window=60).mean()
-        df['MA20_Slope'] = df['MA20'].diff()
-        df['MA60_Slope'] = df['MA60'].diff()
-
-        delta = df['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).ewm(alpha=1/14, adjust=False).mean()
-        loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, adjust=False).mean()
-        rs = gain / loss
-        df['RSI'] = 100 - (100 / (1 + rs))
-
-        exp12 = df['Close'].ewm(span=12, adjust=False).mean()
-        exp26 = df['Close'].ewm(span=26, adjust=False).mean()
-        df['MACD_DIF'] = exp12 - exp26
-        df['MACD_Signal'] = df['MACD_DIF'].ewm(span=9, adjust=False).mean()
-        df['MACD_Hist'] = df['MACD_DIF'] - df['MACD_Signal']
-        
-        df['BB_Mid'] = df['Close'].rolling(window=20).mean()
-        df['BB_Std'] = df['Close'].rolling(window=20).std()
-        df['BB_Up'] = df['BB_Mid'] + (2 * df['BB_Std'])
-        df['BB_Low'] = df['BB_Mid'] - (2 * df['BB_Std'])
-
-        return df
+        # 使用指標模組
+        return calculate_technicals(self.price_history)
 
     def get_fundamentals(self):
-        twse_val = get_twse_data(self.raw_ticker)
+        twse_val = getattr(self, "twse_val", None)
         
         pe = twse_val['PE'] if twse_val else self.info.get('trailingPE', 0)
         pb = twse_val['PB'] if twse_val else self.info.get('priceToBook', 0)
@@ -317,41 +199,7 @@ class StockAnalyzer:
 
     def run_backtest(self, strategy_type="MA_Cross"):
         df = self.calculate_technicals()
-        if df is None: return None
-
-        df['Position'] = 0
-        df['Signal'] = 0
-        
-        if "MA_Cross" in strategy_type:
-            df['Signal'] = np.where(df['MA5'] > df['MA20'], 1, -1)
-            df['Position'] = np.where(df['MA5'] > df['MA20'], 1, 0)
-        elif "RSI_Reversal" in strategy_type:
-            conditions = [(df['RSI'] < 30), (df['RSI'] > 70)]
-            choices = [1, 0]
-            df['Position'] = np.select(conditions, choices, default=np.nan)
-            df['Position'] = df['Position'].ffill().fillna(0)
-
-        df['Daily_Ret'] = df['Close'].pct_change()
-        df['Strategy_Ret'] = df['Position'].shift(1) * df['Daily_Ret']
-        df['Cum_Ret'] = (1 + df['Strategy_Ret']).cumprod()
-        df['Benchmark_Ret'] = (1 + df['Daily_Ret']).cumprod()
-        
-        if df['Cum_Ret'].empty: return None
-        
-        total_ret = (df['Cum_Ret'].iloc[-1] - 1) * 100
-        benchmark_ret = (df['Benchmark_Ret'].iloc[-1] - 1) * 100
-        
-        has_pos = df[df['Position'].shift(1) == 1]
-        win_rate = 0
-        if len(has_pos) > 0:
-            win_rate = len(has_pos[has_pos['Strategy_Ret'] > 0]) / len(has_pos) * 100
-        
-        return {
-            'total_return': total_ret,
-            'benchmark_return': benchmark_ret,
-            'win_rate': win_rate,
-            'equity_curve': df[['Cum_Ret', 'Benchmark_Ret']]
-        }
+        return run_backtest_logic(df, strategy_type)
 
     def determine_verdict(self, tech_df, fund_data):
         if tech_df is None: return "資料不足", "sig-wait", "K線數據過少"
@@ -388,8 +236,9 @@ class ETFAnalyzer:
     
     def fetch_data(self):
         try:
+            import yfinance as yf # locally import for ETF if needed
             # 1. 價格與基礎資訊
-            df, info, _, _, _, _ = get_yahoo_data(self.yf_ticker_name)
+            df, info, _, _, _, _ = get_yahoo_data_sync(self.yf_ticker_name)
             if df is None or info is None: return False
             
             # 2. 持股與權重
@@ -608,14 +457,14 @@ if page == "📊 深度個股儀表板":
             fig.add_trace(go.Candlestick(x=tech_df.index,
                             open=tech_df['Open'], high=tech_df['High'],
                             low=tech_df['Low'], close=tech_df['Close'], name='K線',
-                            increasing_line_color='#ff4b4b', decreasing_line_color='#00c07c'), row=1, col=1)
-            fig.add_trace(go.Scatter(x=tech_df.index, y=tech_df['MA20'], name='MA20', line=dict(color='#FFD700', width=1)), row=1, col=1)
-            fig.add_trace(go.Scatter(x=tech_df.index, y=tech_df['MA60'], name='MA60', line=dict(color='#FF4500', width=1)), row=1, col=1)
-            fig.add_trace(go.Scatter(x=tech_df.index, y=tech_df['BB_Up'], name='BB Up', line=dict(color='rgba(255,255,255,0.3)', width=1, dash='dot'), showlegend=False), row=1, col=1)
-            fig.add_trace(go.Scatter(x=tech_df.index, y=tech_df['BB_Low'], name='BB Low', line=dict(color='rgba(255,255,255,0.3)', width=1, dash='dot'), showlegend=False), row=1, col=1)
+                            increasing_line_color='#FF1E56', decreasing_line_color='#00FF88'), row=1, col=1)
+            fig.add_trace(go.Scatter(x=tech_df.index, y=tech_df['MA20'], name='MA20', line=dict(color='#00F0FF', width=2, shape='spline')), row=1, col=1)
+            fig.add_trace(go.Scatter(x=tech_df.index, y=tech_df['MA60'], name='MA60', line=dict(color='#FF00FF', width=2, shape='spline')), row=1, col=1)
+            fig.add_trace(go.Scatter(x=tech_df.index, y=tech_df['BB_Up'], name='BB Up', line=dict(color='rgba(0, 240, 255, 0.3)', width=1, dash='dot'), showlegend=False), row=1, col=1)
+            fig.add_trace(go.Scatter(x=tech_df.index, y=tech_df['BB_Low'], name='BB Low', line=dict(color='rgba(0, 240, 255, 0.3)', width=1, dash='dot'), showlegend=False, fill='tonexty', fillcolor='rgba(0, 240, 255, 0.05)'), row=1, col=1)
 
-            colors_vol = ['#ff4b4b' if c >= o else '#00c07c' for c, o in zip(tech_df['Close'], tech_df['Open'])]
-            fig.add_trace(go.Bar(x=tech_df.index, y=tech_df['Volume'], name='Volume', marker_color=colors_vol), row=2, col=1)
+            colors_vol = ['#FF1E56' if c >= o else '#00FF88' for c, o in zip(tech_df['Close'], tech_df['Open'])]
+            fig.add_trace(go.Bar(x=tech_df.index, y=tech_df['Volume'], name='Volume', marker_color=colors_vol, opacity=0.8), row=2, col=1)
 
             if chips_df is not None and not chips_df.empty:
                 chips_df['date'] = pd.to_datetime(chips_df['date'])
@@ -626,16 +475,28 @@ if page == "📊 深度個股儀表板":
                 mask = (chips_date_naive >= tech_idx_naive[0]) & (chips_date_naive <= tech_idx_naive[-1])
                 sliced_chips = chips_df.loc[mask]
                 
-                colors_chips = ['#ff4b4b' if v > 0 else '#00c07c' for v in sliced_chips['net']]
-                fig.add_trace(go.Bar(x=sliced_chips['date'], y=sliced_chips['net'], name='法人淨買賣', marker_color=colors_chips), row=3, col=1)
+                colors_chips = ['#FF1E56' if v > 0 else '#00FF88' for v in sliced_chips['net']]
+                fig.add_trace(go.Bar(x=sliced_chips['date'], y=sliced_chips['net'], name='法人淨買賣', marker_color=colors_chips, opacity=0.8), row=3, col=1)
             else:
                 fig.add_annotation(text="無籌碼數據", xref="x domain", yref="y domain", x=0.5, y=0.5, row=3, col=1)
 
-            fig.add_trace(go.Scatter(x=tech_df.index, y=tech_df['RSI'], name='RSI', line=dict(color='#BA55D3')), row=4, col=1)
-            fig.add_hline(y=70, line_dash="dash", line_color="red", row=4, col=1)
-            fig.add_hline(y=30, line_dash="dash", line_color="green", row=4, col=1)
+            fig.add_trace(go.Scatter(x=tech_df.index, y=tech_df['RSI'], name='RSI', line=dict(color='#FE019A', width=2, shape='spline')), row=4, col=1)
+            fig.add_hline(y=70, line_dash="dash", line_color="rgba(255, 30, 86, 0.7)", row=4, col=1)
+            fig.add_hline(y=30, line_dash="dash", line_color="rgba(0, 255, 136, 0.7)", row=4, col=1)
 
-            fig.update_layout(template="plotly_dark", height=800, xaxis_rangeslider_visible=False, hovermode="x unified")
+            fig.update_layout(
+                template="plotly_dark", 
+                height=850, 
+                xaxis_rangeslider_visible=False, 
+                hovermode="x unified",
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(family="Inter, sans-serif", color="#E2E8F0")
+            )
+            # 增加格線的透明度
+            fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='rgba(255,255,255,0.05)')
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(255,255,255,0.05)')
+            
             st.plotly_chart(fig, use_container_width=True)
 
         with tab2:
@@ -674,14 +535,21 @@ if page == "📊 深度個股儀表板":
                 fig_river.add_trace(go.Scatter(x=df_river['Date'], y=df_river['Close'], mode='lines', name='股價', line=dict(color='white', width=3)))
                 
                 multipliers = [10, 15, 20, 25]
-                colors = ['#00FF00', '#FFFF00', '#FFA500', '#FF0000']
+                colors = ['#00FF88', '#00C3FF', '#FFB700', '#FF1E56']
                 labels = ['便宜 (10x)', '合理 (15x)', '昂貴 (20x)', '瘋狂 (25x)']
                 
                 for mult, col, lab in zip(multipliers, colors, labels):
                     line_val = [implied_eps * mult] * len(df_river)
-                    fig_river.add_trace(go.Scatter(x=df_river['Date'], y=line_val, mode='lines', name=lab, line=dict(color=col, dash='dash', width=1)))
+                    fig_river.add_trace(go.Scatter(x=df_river['Date'], y=line_val, mode='lines', name=lab, line=dict(color=col, dash='dash', width=2)))
                 
-                fig_river.update_layout(template="plotly_dark", height=500)
+                fig_river.update_layout(
+                    template="plotly_dark", 
+                    height=500,
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)'
+                )
+                fig_river.update_xaxes(showgrid=True, gridwidth=1, gridcolor='rgba(255,255,255,0.05)')
+                fig_river.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(255,255,255,0.05)')
                 st.plotly_chart(fig_river, use_container_width=True)
             else:
                 st.info("缺乏有效 PE 數據。")
