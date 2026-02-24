@@ -368,6 +368,16 @@ with st.sidebar:
         etf_input = st.text_input("輸入代號 (如 0050)", "0050", key="etf_input")
         etf_btn = st.button("分析 ETF", type="primary", key="etf_btn")
 
+    st.write("---")
+    st.header("🔑 AI 引擎設定")
+    default_key = ""
+    try:
+        default_key = st.secrets.get("GEMINI_API_KEY", "")
+    except Exception:
+        pass
+        
+    gemini_api_key = st.text_input("輸入 Google Gemini API Key", value=default_key, type="password", help="用於產生真人專家級別的投資報告解析。如果已在 Streamlit Secrets 設定，將會自動載入。")
+
 # --- 頁面: 個股儀表板 ---
 if page == "📊 深度個股儀表板":
     st.title("🕵️ 台股 AI 深度戰情室 (Pro)")
